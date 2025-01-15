@@ -700,6 +700,16 @@ onUnmounted(() => {
             </div>
           </div>
         </div>
+
+        <template v-if='peerFilesInfo.type ==="transText"' >
+            <div class="mt-4 md:mt-6 text_box">
+                <div style="width: 90%;align-items: center;">
+                      <textarea v-model="peerFilesInfo.text" class="border border-neutral-300 dark:border-neutral-600 rounded w-full p-2 mb-4 h-32 resize-none bg-white dark:bg-zinc-900 text-gray-900 dark:text-gray-100">
+
+                      </textarea>
+                </div>
+            </div>
+        </template>
       </div>
 
       <!-- 进度和操作按钮 -->
@@ -769,16 +779,6 @@ onUnmounted(() => {
           </NuxtLink>
               </template>
 
-              <template v-if='peerFilesInfo.type ==="transText"' >
-                  <div class="text_box">
-                        <div style="width: 80%;align-items: center;">
-                        <textarea v-model="peerFilesInfo.text" class="border border-neutral-300 dark:border-neutral-600 rounded w-full p-2 mb-4 h-32 resize-none bg-white dark:bg-zinc-900 text-gray-900 dark:text-gray-100">
-
-                        </textarea>
-                        </div>
-                  </div>
-
-              </template>
               <!-- 传输完成 -->
               <div
                 v-if="status.isDone"
