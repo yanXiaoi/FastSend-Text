@@ -166,7 +166,20 @@ async function handleObjData(obj: any) {
       // 传输单个文件
       initCurFile()
       totalFileSize.value = curFile.value.size
-    } else {
+    }else if (peerFilesInfo.value.type === 'transText'){
+        //对话框显示文本
+        toast.add({
+          severity: 'success',
+          summary: 'Success',
+          detail: '接收完毕',
+          life: 5e3
+        })
+        /// 传输完成，告知对方
+        await pdc?.sendData(JSON.stringify({ type: 'done' }))
+        status.value.isReceiving = false
+        status.value.isDone = true
+        dispose()
+    }else {
       if (!isModernFileAPISupport.value) {
         // 传输目录，但是不支持现代文件访问API，直接报错
         status.value.warn.code = -1
@@ -255,8 +268,6 @@ function initPDC() {
   pdc.onICECandidate = (candidate) =>
     ws?.send(JSON.stringify({ type: 'candidate', data: candidate }))
   pdc.onDispose = () => {
-    console.log('onDispose')
-
     status.value.isConnectPeer = false
     if (status.value.isIniting) {
       // 尝试连接失败（超时）
@@ -693,57 +704,60 @@ onUnmounted(() => {
 
       <!-- 进度和操作按钮 -->
       <div class="mt-6 md:mt-0">
+
+        <template v-if='peerFilesInfo.type !=="transText"'>
         <!-- 进度 -->
         <div>
-          <!-- 当前文件进度 -->
-          <p class="text-sm mt-2">{{ curFile.name }}</p>
-          <ProgressBar
-            :value="
-              Math.round(curFile.size === 0 ? 0 : (curFile.transmittedBytes / curFile.size) * 100)
-            "
-          />
-          <p class="text-right text-sm">
-            <span>{{ humanFileSize(curFile.speed) }}/s</span
-            ><span class="ml-4">{{ humanFileSize(curFile.transmittedBytes) }}</span
-            ><span class="mx-1">/</span><span>{{ humanFileSize(curFile.size) }}</span>
-          </p>
+            <!-- 当前文件进度 -->
+            <p class="text-sm mt-2">{{ curFile.name }}</p>
+            <ProgressBar
+              :value="
+                Math.round(curFile.size === 0 ? 0 : (curFile.transmittedBytes / curFile.size) * 100)
+              "
+            />
+            <p class="text-right text-sm">
+              <span>{{ humanFileSize(curFile.speed) }}/s</span
+              ><span class="ml-4">{{ humanFileSize(curFile.transmittedBytes) }}</span
+              ><span class="mx-1">/</span><span>{{ humanFileSize(curFile.size) }}</span>
+            </p>
 
-          <!-- 总进度 -->
-          <p class="text-sm mt-4">{{ $t('label.totalProgress') }}</p>
-          <ProgressBar
-            :value="
-              Math.round(totalFileSize === 0 ? 0 : (totalTransmittedBytes / totalFileSize) * 100)
-            "
-          />
-          <div class="flex flex-row items-center text-sm">
-            <span>{{ durationTimeStr }} / {{ remainingTimeStr }}</span>
-            <div class="flex-1"></div>
-            <span>{{ humanFileSize(totalSpeed) }}/s</span
-            ><span class="ml-4">{{ humanFileSize(totalTransmittedBytes) }}</span
-            ><span class="mx-1">/</span><span>{{ humanFileSize(totalFileSize) }}</span>
+            <!-- 总进度 -->
+            <p class="text-sm mt-4">{{ $t('label.totalProgress') }}</p>
+            <ProgressBar
+              :value="
+                Math.round(totalFileSize === 0 ? 0 : (totalTransmittedBytes / totalFileSize) * 100)
+              "
+            />
+            <div class="flex flex-row items-center text-sm">
+              <span>{{ durationTimeStr }} / {{ remainingTimeStr }}</span>
+              <div class="flex-1"></div>
+              <span>{{ humanFileSize(totalSpeed) }}/s</span
+              ><span class="ml-4">{{ humanFileSize(totalTransmittedBytes) }}</span
+              ><span class="mx-1">/</span><span>{{ humanFileSize(totalFileSize) }}</span>
+            </div>
           </div>
-        </div>
-
-        <!-- 操作按钮 -->
-        <div v-if="status.warn.code === 0" class="my-16">
-          <!-- 接收和终止 -->
-          <Button
-            v-if="!status.isLock"
-            rounded
-            severity="contrast"
-            class="w-full tracking-wider"
-            :disabled="
-              !status.isConnectPeer ||
-              status.isReceiving ||
-              (peerFilesInfo.type === 'syncDir' && syncDirStatus.isDiffing)
-            "
-            @click="doReceive"
-            ><Icon name="solar:archive-down-minimlistic-line-duotone" class="mr-2" />{{
-              $t('btn.receive')
-            }}</Button
-          >
-          <!-- 终止传输 -->
-          <NuxtLink :to="localePath('/')">
+        </template>
+          <!-- 操作按钮 -->
+          <div v-if="status.warn.code === 0" class="my-16">
+              <template v-if='peerFilesInfo.type !=="transText"'>
+                <!-- 接收和终止 -->
+                <Button
+                  v-if="!status.isLock"
+                  rounded
+                  severity="contrast"
+                  class="w-full tracking-wider"
+                  :disabled="
+                    !status.isConnectPeer ||
+                    status.isReceiving ||
+                    (peerFilesInfo.type === 'syncDir' && syncDirStatus.isDiffing)
+                  "
+                  @click="doReceive"
+                  ><Icon name="solar:archive-down-minimlistic-line-duotone" class="mr-2" />{{
+                    $t('btn.receive')
+                  }}</Button
+                >
+                <!-- 终止传输 -->
+                <NuxtLink :to="localePath('/')">
             <Button
               v-if="status.isReceiving"
               rounded
@@ -753,28 +767,40 @@ onUnmounted(() => {
               >{{ $t('btn.terminate') }}</Button
             >
           </NuxtLink>
+              </template>
 
-          <!-- 传输完成 -->
-          <div
-            v-if="status.isDone"
-            class="flex flex-col items-center justify-center py-4 gap-4 mb-4"
-          >
-            <Icon name="solar:confetti-line-duotone" size="100" class="text-amber-500" />
-            <p class="text-xl tracking-wider">{{ $t('hint.transCompleted') }}</p>
-          </div>
+              <template v-if='peerFilesInfo.type ==="transText"' >
+                  <div class="text_box">
+                        <div style="width: 80%;align-items: center;">
+                        <textarea v-model="peerFilesInfo.text" class="border border-neutral-300 dark:border-neutral-600 rounded w-full p-2 mb-4 h-32 resize-none bg-white dark:bg-zinc-900 text-gray-900 dark:text-gray-100">
 
-          <!-- 如果不支持现代文件访问，则显示手动下载按钮 -->
-          <Button
-            v-if="status.isDone && !isModernFileAPISupport"
-            rounded
-            outlined
-            severity="contrast"
-            class="w-full tracking-wider"
-            @click="downloadFile"
-            ><Icon name="solar:download-minimalistic-linear" class="mr-2" />{{
-              $t('btn.download')
-            }}</Button
-          >
+                        </textarea>
+                        </div>
+                  </div>
+
+              </template>
+              <!-- 传输完成 -->
+              <div
+                v-if="status.isDone"
+                class="flex flex-col items-center justify-center py-4 gap-4 mb-4"
+              >
+                <Icon name="solar:confetti-line-duotone" size="100" class="text-amber-500" />
+                <p class="text-xl tracking-wider">{{ $t('hint.transCompleted') }}</p>
+              </div>
+              <template v-if='peerFilesInfo.type !=="transText"'>
+                <!-- 如果不支持现代文件访问，则显示手动下载按钮 -->
+                <Button
+                  v-if="status.isDone && !isModernFileAPISupport"
+                  rounded
+                  outlined
+                  severity="contrast"
+                  class="w-full tracking-wider"
+                  @click="downloadFile"
+                  ><Icon name="solar:download-minimalistic-linear" class="mr-2" />{{
+                    $t('btn.download')
+                  }}</Button
+                >
+              </template>
 
           <div v-if="status.isDone" class="py-6">
             <!-- buy me coffee -->
@@ -792,9 +818,8 @@ onUnmounted(() => {
             >
           </div>
         </div>
-
         <!-- 业务异常 -->
-        <div v-else class="mb-16 flex flex-col items-center justify-center py-10 gap-4">
+        <div v-if="!status.isDone" class="mb-16 flex flex-col items-center justify-center py-10 gap-4">
           <Icon
             name="material-symbols-light:warning-outline-rounded"
             size="96"
@@ -831,6 +856,12 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
+.text_box{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+}
 .loader {
   width: 100px;
   height: 40px;

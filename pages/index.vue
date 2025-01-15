@@ -8,6 +8,10 @@ const isDirSupport = ref(true)
 const receiveCode = ref('')
 const isFileDraging = ref(false)
 const fileDragArea = ref()
+const textModal = ref({
+    isShow:false,
+    text:'',
+})
 
 const { data: transCount } = useFetch('/api/transCount', {
   method: 'post',
@@ -103,6 +107,18 @@ function sendFile() {
       toast.add({ severity: 'error', summary: 'Error', detail: e, life: 5e3 })
       useFullScreenLoader(false)
     })
+}
+
+//发送（共享）文本
+function sendText() {
+    // 弹出输入框
+    const text = textModal.value.text;
+    if (text) {
+        useFilesInfo('transText', { 'text':text })
+        router.push(localePath('/sender'))
+    }else {
+        toast.add({ severity: 'error', summary: 'Error', detail: '文本不能为空', life: 5e3 })
+    }
 }
 
 watch(isFileDraging, (val) => {
@@ -248,6 +264,17 @@ onMounted(() => {
             $t('btn.sendDir')
           }}</Button
         >
+        <Button
+          outlined
+          rounded
+          class="block w-full tracking-wider mt-6"
+          severity="contrast"
+          :disabled="!isDirSupport"
+          @click="textModal.isShow = true"
+          ><Icon name="solar:text-field-outline" class="mr-2" />{{
+            $t('btn.sendText')
+          }}</Button
+        >
         <!-- <Button
           rounded
           class="block w-full tracking-wider mt-6"
@@ -285,6 +312,17 @@ onMounted(() => {
       <span>{{ $t('label.times') }}</span>
     </div>
   </div>
+  <!--用户发送文本模态框-->
+    <div v-if="textModal.isShow" class="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50">
+        <div class="bg-white dark:bg-zinc-800 rounded-lg shadow-lg p-6 w-11/12 md:w-1/3">
+            <h2 class="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">发送文本</h2>
+            <textarea v-model="textModal.text" placeholder="请输入待发送的文本" class="border border-neutral-300 dark:border-neutral-600 rounded w-full p-2 mb-4 h-32 resize-none bg-white dark:bg-zinc-900 text-gray-900 dark:text-gray-100"></textarea>
+            <div class="flex justify-end">
+                <button @click="sendText" class="bg-blue-500 text-white rounded px-4 py-2 mr-2">发送</button>
+                <button @click="textModal.isShow = false" class="bg-gray-300 dark:bg-gray-700 rounded px-4 py-2">取消</button>
+            </div>
+        </div>
+    </div>
 </template>
 
 <style>

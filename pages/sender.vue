@@ -176,6 +176,17 @@ async function handleObjData(obj: any) {
       // -1，不支持现代文件访问API，不能传输目录
       status.value.warn.code = obj.data
     }
+  } else if (obj.type === 'transText') {
+    // 处理传输文本
+    const text = obj.data.text
+    await pdc?.sendData(JSON.stringify({ type: 'transText', data: text }))
+    status.value.isWaitingConfirm = false
+    toast.add({
+      severity: 'success',
+      summary: 'Success',
+      detail: t('hint.textSent'),
+      life: 5e3
+    })
   }
 }
 
@@ -229,10 +240,17 @@ onMounted(() => {
     router.replace(localePath('/'))
     return
   }
-  if (Object.keys(filesInfo.value.fileMap).length === 0) {
-    toast.add({ severity: 'warn', summary: 'Warn', detail: '目录为空', life: 5e3 })
+
+  if (filesInfo.value.type === 'transText' && !filesInfo.value.text) {
+    toast.add({ severity: 'warn', summary: 'Warn', detail: '文本为空', life: 5e3 })
     router.replace(localePath('/'))
     return
+  }
+
+  if (Object.keys(filesInfo.value.fileMap).length === 0 && filesInfo.value.type !== 'transText') {
+      toast.add({ severity: 'warn', summary: 'Warn', detail: '目录为空', life: 5e3 })
+      router.replace(localePath('/'))
+      return
   }
 
   try {
@@ -428,19 +446,16 @@ onUnmounted(() => {
           >
         </div>
       </div>
-
       <!-- 发送完毕 -->
       <div v-else class="flex flex-col items-center justify-center py-10 gap-4">
         <Icon name="solar:confetti-line-duotone" size="100" class="text-amber-500" />
         <p class="text-xl tracking-wider">{{ $t('hint.transCompleted') }}</p>
-
         <div class="py-4 flex flex-col md:flex-row items-center justify-center gap-6">
           <NuxtLink to="https://www.buymeacoffee.com/shouchen" target="_blank">
             <Button outlined severity="contrast" class="tracking-wider"
               ><IconCoffee class="size-[1.125rem] mr-2" />{{ $t('btn.buyMeCoffee') }}</Button
             >
           </NuxtLink>
-
           <NuxtLink :to="localePath('/')">
             <Button severity="contrast" class="tracking-wider"
               ><Icon name="solar:home-2-linear" class="mr-2" />{{ $t('btn.toHome') }}</Button
